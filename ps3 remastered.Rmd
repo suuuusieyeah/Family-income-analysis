@@ -1,0 +1,95 @@
+---
+title: "Family Income Analysis Using Logistic Model"
+Author: Meijia Ming
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r include=FALSE}
+library(tidyverse)
+library(survey)
+library(car)
+library(glmnet)
+```
+
+# Abstract I
+Family income is the most important factor reflecting the living standard of the people. However, income gap issue has become a serious topic for a nation. If the income gap is too large, it will lead to social inequality. In this report, we will discuss how the family income level is affected by age, gender, education level, province, working time and marital status. A dataset of GSS in 2017 was obtained and we have picked out some of the variables interested in. Then, binary logistic model is applied to classify which family have high income. The results reveal that family income levels are strongly correlated with whether they have completed bachelor's education, whether they live in Newfoundland and Labrador province and whether they got married and how many hours they worked per week.
+
+# Introduction II
+Our goal is to evaluate how the interested factors impact the classification of family income level. A dataset is obtained from 2017 GSS and we further narrow down our scope to the family income and some interested attributes. In this report, we first set a threshold to separate the high-income family from the collected income data, which is 100,000 dollars. Then, a binary logistic model is constructed to fit. Binary logistic model has a dependent variable with two possible values (“High”, "Regular" in our report), and a series of predictors included in the model to estimate the coefficients. The predictors that will be included in our following model are:
+a) age
+b) gender
+c) education level
+d) province
+e) working hours
+f) marital status
+
+Through fitting the model, we can get the estimations of the coefficients and some statistical results to explain how these attributes affect the income level. In the end, we will also make a discussion and advise next step.
+All the code can be found here:
+
+# Data III
+
+```{r}
+data<-read.csv("gss(5).csv")
+##str(data)
+```
+
+We obtained dataset from 2017 GSS, the dataset contains variables of different features of random selected families. The target population is 20602, the sampling method is good and investigate a number of 81 variables. However the dataset was not clean, it contains a lot missing value of each variables, another drawback is the data was obtained within Canada, so it could be a little narrotive in some degree.
+
+# Model IV
+
+```{r echo=TRUE}
+data$income_family.type<-as.factor(ifelse(data$income_family>100000,"High","Regular")) 
+data$income_family.type<- relevel(data$income_family.type, ref = "Regular")  
+N=100000
+n=length(data$income_family)
+fpc.srs = rep(N, n)
+example.design.srs <- svydesign(id=~1, data=data, fpc=fpc.srs)
+svyglm.srs.logit <- svyglm(income_family.type ~ age+sex+education+province+average_hours_worked+marital_status, example.design.srs, family="binomial")
+summary(svyglm.srs.logit) 
+```
+
+
+1.We then continue to analysis by building a logistic regression model to predict the 'Family Income' using variables 'age', 'sex', 'education', 'province', 'average working hours' and 'marital status'. A logistic model is better to investigate the categorical data which can give a good inference about the importance of each feature. The reason we choose a logistic model is because we believe the variables we focused on most are collected as categorical data such as income level, education and marital status etc while only a few numerical variables like number of marriages are less important for our investigation. Using the data selected we build a logistic model with the following formula:
+$log(p/1-p)= \beta_0 + \beta_1age + \beta_2*sexMale + \beta_3*educationCollege + .... + \beta_k*marital_statuswidowed$
+when sex is male, sexMale =1 otherwise sexMale =0.
+By checking the p-value, we notice that people who educated at high school or high degree, average working hours more than 30 hours and married people have larger p-value, which means those variables are more significant.
+
+```{r echo=TRUE}
+vif(svyglm.srs.logit)
+summary(svyglm.srs.logit)$adj.r.squared
+```
+
+2.We checked the multicollinearity of the model by compute its VIF. We find that none of the value is greater than 5, which means there is no multicollinearity existing.
+
+
+```{r echo=TRUE}
+income<-data$income_family
+income<-filter(data,income_family=='income')
+x1<-as.numeric(table(data$income_family))
+piepercent<-(paste(round(100*x1/sum(x1),2)))
+pie(x1, labels = piepercent, main = , col = rainbow(length(x1)))
+legend("topright", c('less than 25000','25000 to 49999', '50000 to 74999', '75000 to 99999', '100000 to 124999', '125000 or more'), fill = rainbow(length(x1)), cex = 0.6)
+```
+
+3.From the pie chart above, we can see almost half of income data is below 75,000 dollars. Only 9% have income less than 25,000 dollars. 25,000-49,999 and 50,000-74,999 have almost same percentage. For the high income groups, the proportions of 75,000-99,999, 100,000-124,999 and 125,000 or more groups are 17.15%, 16.77% and 13.85% respectively. We can realize that the Canadian family income level in 2017 is quite even.
+
+# Result V
+All the independent variable used are categorical. From the summary of the logistic model, the p-values of *educationUniversity certificate or diploma below the bachelor's level*, *provinceNewfoundland and Labrador*, *marital_statusMarried*, *average_hours_worked30.0 to 40.0 hours* and *intercept* is less than 0.05, which means these factors are significant in our model(significant level 0.05) and should be included in the model. The two factors of whether they obtained bachelor's diploma and whether they live in Newfoundland have large coefficients are both larger than 15. In other words, the log odds will less 15 if the family member obtained bachelor's diploma or if the family live in Newfoundland and Labrador when other conditions remain unchanged. Stronger impact of these two factors on the respond than that of the other two.
+
+For the further step, we can consider to remove the "bad" variables and keep the good ones, then fit anothor model to get better estimated coefficients. Not only that, but we can add some potential variables to mine more information.
+
+# References VI
+https://sda-artsci-utoronto-ca.myaccess.library.utoronto.ca/sdaweb/html/gss.htm
+
+
+
+
+
+
+
+
+
